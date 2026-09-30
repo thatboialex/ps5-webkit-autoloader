@@ -77,7 +77,9 @@
         })
         .then(function (t) {
           if (t.trim() === version) {
-            window.location.replace('/app/' + dir + '/index.html');
+            /* Preserve ?force=relapse / ?force=poops from the homescreen deeplink. */
+            window.location.replace('/app/' + dir + '/index.html' +
+              (window.location.search || '') + (window.location.hash || ''));
           } else {
             fail();
           }
