@@ -30,16 +30,56 @@
 
 INCASSET(param_json, "assets/param.json");
 INCASSET(icon0_png, "assets/icon0.png");
+INCASSET(param_poops_json, "assets/param-poops.json");
+INCASSET(icon0_poops_png, "assets/icon0-poops.png");
+INCASSET(param_relapse_json, "assets/param-relapse.json");
+INCASSET(icon0_relapse_png, "assets/icon0-relapse.png");
 
 int sceAppInstUtilInitialize(void);
 int sceAppInstUtilTerminate(void);
 int sceAppInstUtilAppInstallAll(void *);
 int sceAppInstUtilAppUnInstall(const char *);
 
-/* Path buffers below are built as /user/app/<title_id>/... — title IDs are
- * fixed 9-char strings, so 256 bytes can never truncate. This guard keeps
- * it that way if WKAL_TITLE_ID is ever changed. */
-_Static_assert(sizeof(WKAL_TITLE_ID) <= 16, "WKAL_TITLE_ID too long for path buffers");
+typedef struct {
+  const char *title_id;
+  const char *display_name;
+  const uint8_t *param_data;
+  size_t param_size;
+  const uint8_t *icon_data;
+  size_t icon_size;
+} LauncherDefinition;
+
+static const LauncherDefinition launcher_umtx2 = {
+    WKAL_TITLE_ID,
+    "WebKit Autoloader",
+    param_json,
+    (size_t)&param_json_size,
+    icon0_png,
+    (size_t)&icon0_png_size,
+};
+
+static const LauncherDefinition launcher_poops = {
+    WKAL_POOPS_TITLE_ID,
+    "WebKit Autoloader - Poops",
+    param_poops_json,
+    (size_t)&param_poops_json_size,
+    icon0_poops_png,
+    (size_t)&icon0_poops_png_size,
+};
+
+static const LauncherDefinition launcher_relapse = {
+    WKAL_RELAPSE_TITLE_ID,
+    "WebKit Autoloader - Relapse",
+    param_relapse_json,
+    (size_t)&param_relapse_json_size,
+    icon0_relapse_png,
+    (size_t)&icon0_relapse_png_size,
+};
+
+/* Path buffers below are built as /user/app/<title_id>/... */
+_Static_assert(sizeof(WKAL_TITLE_ID) <= 16, "WKAL_TITLE_ID too long");
+_Static_assert(sizeof(WKAL_POOPS_TITLE_ID) <= 16, "WKAL_POOPS_TITLE_ID too long");
+_Static_assert(sizeof(WKAL_RELAPSE_TITLE_ID) <= 16, "WKAL_RELAPSE_TITLE_ID too long");
 
 static int mkdir_p(const char *path, mode_t mode) {
   char tmp[256];
@@ -52,23 +92,20 @@ static int mkdir_p(const char *path, mode_t mode) {
   for (char *p = tmp + 1; *p; p++) {
     if (*p == '/') {
       *p = '\0';
-      if (mkdir(tmp, mode) != 0 && errno != EEXIST) {
+      if (mkdir(tmp, mode) != 0 && errno != EEXIST)
         return -1;
-      }
       *p = '/';
     }
   }
-  if (mkdir(tmp, mode) != 0 && errno != EEXIST) {
+  if (mkdir(tmp, mode) != 0 && errno != EEXIST)
     return -1;
-  }
   return 0;
 }
 
 static int install_file(const char *path, const uint8_t *data, size_t size) {
   FILE *f;
-  if (!(f = fopen(path, "wb"))) {
+  if (!(f = fopen(path, "wb")))
     return -1;
-  }
   if (fwrite(data, size, 1, f) != 1) {
     fclose(f);
     return -1;
@@ -78,8 +115,7 @@ static int install_file(const char *path, const uint8_t *data, size_t size) {
 }
 
 static int install_app(const char *title_id, const char *dir) {
-  int (*sceAppInstUtilAppInstallTitleDir)(const char *, const char *, void *) =
-      0;
+  int (*sceAppInstUtilAppInstallTitleDir)(const char *, const char *, void *) = 0;
   const char *nid = "Wudg3Xe3heE";
   uint32_t handle;
 
@@ -88,9 +124,8 @@ static int install_app(const char *title_id, const char *dir) {
         (void *)kernel_dynlib_resolve(-1, handle, nid);
   }
 
-  if (sceAppInstUtilAppInstallTitleDir) {
+  if (sceAppInstUtilAppInstallTitleDir)
     return sceAppInstUtilAppInstallTitleDir(title_id, dir, 0);
-  }
 
   return sceAppInstUtilAppInstallAll(0);
 }
@@ -122,81 +157,102 @@ static int needs_update(const char *path, const uint8_t *expected_data,
 
   int mismatch = memcmp(buf, expected_data, expected_size);
   free(buf);
-
   return mismatch != 0;
 }
 
-int wkali_install_app_if_needed(void) {
-  const char *title_id = WKAL_TITLE_ID;
+static int install_launcher_if_needed(const LauncherDefinition *launcher) {
   char base_dir[256];
   char param_path[256];
   char icon_path[256];
 
-  snprintf(base_dir, sizeof(base_dir), "/user/app/%s", title_id);
-  snprintf(param_path, sizeof(param_path), "/user/app/%s/sce_sys/param.json",
-           title_id);
-  snprintf(icon_path, sizeof(icon_path), "/user/app/%s/sce_sys/icon0.png",
-           title_id);
+  snprintf(base_dir, sizeof(base_dir), "/user/app/%s", launcher->title_id);
+  snprintf(param_path, sizeof(param_path), "%s/sce_sys/param.json", base_dir);
+  snprintf(icon_path, sizeof(icon_path), "%s/sce_sys/icon0.png", base_dir);
 
   int update_needed = 0;
   struct stat st;
   if (stat(base_dir, &st) != 0) {
     update_needed = 1;
   } else {
-    if (needs_update(param_path, param_json, param_json_size))
+    if (needs_update(param_path, launcher->param_data, launcher->param_size))
       update_needed = 1;
-    if (needs_update(icon_path, icon0_png, icon0_png_size))
+    if (needs_update(icon_path, launcher->icon_data, launcher->icon_size))
       update_needed = 1;
   }
 
   if (!update_needed) {
-    return 0; /* Already installed and up to date */
+    wkali_log("[WKALI] %s (%s) is already up to date.\n",
+              launcher->display_name, launcher->title_id);
+    return 0;
   }
 
   if (stat(base_dir, &st) == 0) {
-    wkali_log("[WKALI] Updating existing app launcher (%s)...\n", title_id);
-    wkali_notify("Updating WebKit Autoloader App...");
+    wkali_log("[WKALI] Updating %s (%s)...\n",
+              launcher->display_name, launcher->title_id);
   } else {
-    wkali_log("[WKALI] Installing browser launcher app (%s)...\n", title_id);
-    wkali_notify("Installing WebKit Autoloader App...");
+    wkali_log("[WKALI] Installing %s (%s)...\n",
+              launcher->display_name, launcher->title_id);
+  }
+  wkali_notify("Installing %s...", launcher->display_name);
+
+  char sce_sys_dir[256];
+  snprintf(sce_sys_dir, sizeof(sce_sys_dir), "%s/sce_sys", base_dir);
+  if (mkdir_p(sce_sys_dir, 0755) != 0) {
+    wkali_log("[WKALI] Failed to create app dir: %s (errno: %d)\n",
+              sce_sys_dir, errno);
+    return -1;
   }
 
-  int err;
-  if ((err = sceAppInstUtilInitialize())) {
+  if (install_file(param_path, launcher->param_data, launcher->param_size)) {
+    wkali_log("[WKALI] Failed to install %s param.json\n",
+              launcher->display_name);
+    return -1;
+  }
+
+  if (install_file(icon_path, launcher->icon_data, launcher->icon_size)) {
+    wkali_log("[WKALI] Failed to install %s icon0.png\n",
+              launcher->display_name);
+    return -1;
+  }
+
+  if (install_app(launcher->title_id, "/user/app/")) {
+    wkali_log("[WKALI] install_app failed for %s (%s)\n",
+              launcher->display_name, launcher->title_id);
+    return -1;
+  }
+
+  wkali_log("[WKALI] %s installed successfully.\n", launcher->display_name);
+  return 0;
+}
+
+int wkali_install_apps_if_needed(unsigned int launcher_mask) {
+  if (launcher_mask == 0) {
+    wkali_log("[WKALI] No compatible launcher selected for installation.\n");
+    return -1;
+  }
+
+  int err = sceAppInstUtilInitialize();
+  if (err) {
     wkali_log("[WKALI] sceAppInstUtilInitialize: error 0x%08X\n", err);
     return -1;
   }
 
-  char sce_sys_dir[256];
-  snprintf(sce_sys_dir, sizeof(sce_sys_dir), "/user/app/%s/sce_sys", title_id);
-  if (mkdir_p(sce_sys_dir, 0755) != 0) {
-    wkali_log("[WKALI] Failed to create app dir: %s (errno: %d)\n",
-              sce_sys_dir, errno);
-    sceAppInstUtilTerminate();
-    return -1;
-  }
-
-  if (install_file(param_path, param_json, param_json_size)) {
-    wkali_log("[WKALI] Failed to install param.json\n");
-    sceAppInstUtilTerminate();
-    return -1;
-  }
-
-  if (install_file(icon_path, icon0_png, icon0_png_size)) {
-    wkali_log("[WKALI] Failed to install icon0.png\n");
-    sceAppInstUtilTerminate();
-    return -1;
-  }
-
-  if ((err = install_app(title_id, "/user/app/"))) {
-    wkali_log("[WKALI] install_app: error 0x%08X\n", err);
-    sceAppInstUtilTerminate();
-    return -1;
-  }
-
-  wkali_log("[WKALI] Launcher app installed successfully.\n");
-  wkali_notify("WebKit Autoloader App Ready!");
+  int result = 0;
+  if ((launcher_mask & WKALI_LAUNCHER_UMTX2) &&
+      install_launcher_if_needed(&launcher_umtx2) != 0)
+    result = -1;
+  if ((launcher_mask & WKALI_LAUNCHER_POOPS) &&
+      install_launcher_if_needed(&launcher_poops) != 0)
+    result = -1;
+  if ((launcher_mask & WKALI_LAUNCHER_RELAPSE) &&
+      install_launcher_if_needed(&launcher_relapse) != 0)
+    result = -1;
 
   sceAppInstUtilTerminate();
-  return 0;
+
+  if (result == 0) {
+    wkali_log("[WKALI] Requested launcher set installed successfully.\n");
+    wkali_notify("WebKit Autoloader launchers ready!");
+  }
+  return result;
 }
