@@ -1,0 +1,62 @@
+name: Test ELF Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'test-build/**'
+
+jobs:
+  build-test-elfs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Build PS5 SDK image
+        run: docker build -t ps5-webkit-autoloader-sdk -f Dockerfile.sdk .
+
+      - name: Build dual, Poopsploit and Relapse ELFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test-elfs
+
+          build_one() {
+            mode="$1"
+            suffix="$2"
+            custom="$3"
+
+            echo "::group::Building \${suffix} (\${mode})"
+            docker run --rm \
+              -u "$(id -u):$(id -g)" \
+              -e BUILD_TYPE=dev \
+              -e FORCE_EXPLOIT="\${mode}" \
+              -e CUSTOM_VERSION="\${custom}" \
+              -v "$(pwd)":/src \
+              -w /src \
+              ps5-webkit-autoloader-sdk \
+              make clean all
+
+            test -f installer.elf
+            mv installer.elf "test-elfs/\${suffix}.elf"
+            echo "::endgroup::"
+          }
+
+          build_one auto "ps5-webkit-autoloader-dual-test" "dual-test"
+          build_one poops "poopsploit-autoloader-test" "poopsploit-test"
+          build_one relapse "relapse-autoloader-test" "relapse-test"
+
+          sha256sum test-elfs/*.elf | tee test-elfs/SHA256SUMS.txt
+          ls -lh test-elfs/
+
+      - name: Upload PS5 test ELF artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps5-test-elfs
+          path: test-elfs/
+          retention-days: 7
+          if-no-files-found: error
