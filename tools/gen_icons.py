@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Generate all derived icon assets from assets/icon.svg at build time.
+"""Generate generic and dedicated launcher icon assets at build time.
 
-The master SVG is a full-bleed sphere with no padding and no background, so
-every generated asset gets a dark background and ~10% padding added.
+The generic icon uses assets/icon.svg with the existing background/padding
+wrapper. Relapse and Poopsploit use dedicated full-size SVG masters.
 
 Outputs:
   assets/icon0.png                        Generic/UMTX2 PS5 icon (512x512)
@@ -27,6 +27,8 @@ import tempfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MASTER = os.path.join(ROOT, "assets", "icon.svg")
+MASTER_RELAPSE = os.path.join(ROOT, "assets", "icon-relapse.svg")
+MASTER_POOPS = os.path.join(ROOT, "assets", "icon-poops.svg")
 ICON0 = os.path.join(ROOT, "assets", "icon0.png")
 ICON0_RELAPSE = os.path.join(ROOT, "assets", "icon0-relapse.png")
 ICON0_POOPS = os.path.join(ROOT, "assets", "icon0-poops.png")
@@ -76,20 +78,6 @@ def build_wrapper_svg(master_src):
         t=round(TRANSLATE, 3),
         s=round(SCALE, 6),
     )
-
-
-def add_launcher_badge(svg, label, fill, stroke):
-    """Add a large, high-contrast launcher badge while preserving base branding."""
-    badge = """
-  <g aria-label="{label}">
-    <circle cx="812" cy="812" r="146" fill="{fill}" stroke="{stroke}" stroke-width="24"/>
-    <circle cx="812" cy="812" r="118" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="6"/>
-    <text x="812" y="858" text-anchor="middle"
-          font-family="Arial, Helvetica, sans-serif" font-size="154"
-          font-weight="700" fill="#ffffff">{label}</text>
-  </g>
-""".format(label=label, fill=fill, stroke=stroke)
-    return svg.replace("</svg>\n", badge + "</svg>\n")
 
 
 def rsvg_render(svg_path, size):
@@ -147,22 +135,16 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix="wkal-icon-") as tmp:
         wrapper_path = os.path.join(tmp, "icon-bg.svg")
-        relapse_path = os.path.join(tmp, "icon-relapse.svg")
-        poops_path = os.path.join(tmp, "icon-poops.svg")
         with open(wrapper_path, "w") as f:
             f.write(wrapper)
-        with open(relapse_path, "w") as f:
-            f.write(add_launcher_badge(wrapper, "R", "#9d174d", "#e879f9"))
-        with open(poops_path, "w") as f:
-            f.write(add_launcher_badge(wrapper, "P", "#92400e", "#fbbf24"))
 
-        # PS5 homescreen icons (512x512) and Windows .exe icon (16-256px)
+        # Generic/UMTX2 icon plus two genuinely independent launcher designs.
         with open(ICON0, "wb") as f:
             f.write(render(wrapper_path, 512))
         with open(ICON0_RELAPSE, "wb") as f:
-            f.write(render(relapse_path, 512))
+            f.write(render(MASTER_RELAPSE, 512))
         with open(ICON0_POOPS, "wb") as f:
-            f.write(render(poops_path, 512))
+            f.write(render(MASTER_POOPS, 512))
         pngs = [(size, render(wrapper_path, size)) for size in ICO_SIZES]
         with open(ICON_ICO, "wb") as f:
             f.write(build_ico(pngs))
@@ -179,7 +161,7 @@ def main():
             with open(path, "w") as f:
                 f.write(master_src)
 
-    print("Generated icon assets from assets/icon.svg:")
+    print("Generated generic, Relapse, and Poopsploit icon assets:")
     for path in (ICON0, ICON0_RELAPSE, ICON0_POOPS, ICON_ICO,
                  FAVICON_INSTALLER, FAVICON_AUTOLOADER,
                  LOGO_INSTALLER, LOGO_AUTOLOADER):

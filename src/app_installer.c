@@ -60,7 +60,7 @@ static const LauncherDefinition launcher_umtx2 = {
 
 static const LauncherDefinition launcher_poops = {
     WKAL_POOPS_TITLE_ID,
-    "WebKit Autoloader - Poops",
+    "Poopsploit AutoLoader",
     param_poops_json,
     &param_poops_json_size,
     icon0_poops_png,
@@ -69,7 +69,7 @@ static const LauncherDefinition launcher_poops = {
 
 static const LauncherDefinition launcher_relapse = {
     WKAL_RELAPSE_TITLE_ID,
-    "WebKit Autoloader - Relapse",
+    "Relapse AutoLoader",
     param_relapse_json,
     &param_relapse_json_size,
     icon0_relapse_png,

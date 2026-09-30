@@ -39,8 +39,10 @@ FRONTEND_AUTOLOADER := frontend/autoloader
 FRONTEND_STAGE := frontend/dist
 FRONTEND_FILES := $(shell find $(FRONTEND_INSTALLER_PAGE) $(FRONTEND_POINTER) $(FRONTEND_AUTOLOADER) -type f 2>/dev/null)
 
-# Generated icon assets (master: assets/icon.svg, see tools/gen_icons.py)
+# Generated icon assets (see tools/gen_icons.py)
 ICON_MASTER := assets/icon.svg
+ICON_MASTER_RELAPSE := assets/icon-relapse.svg
+ICON_MASTER_POOPS := assets/icon-poops.svg
 ICON0 := assets/icon0.png
 ICON0_RELAPSE := assets/icon0-relapse.png
 ICON0_POOPS := assets/icon0-poops.png
@@ -85,7 +87,7 @@ print-version:
 # Regenerate all derived icon assets (homescreen icon, .ico, favicons, logos)
 icons: $(ICON0) $(ICON0_RELAPSE) $(ICON0_POOPS) $(ICON_ICO) $(FAVICON_INSTALLER) $(FAVICON_AUTOLOADER) $(LOGO_INSTALLER) $(LOGO_AUTOLOADER)
 
-$(ICON0) $(ICON0_RELAPSE) $(ICON0_POOPS) $(ICON_ICO) $(FAVICON_INSTALLER) $(FAVICON_AUTOLOADER) $(LOGO_INSTALLER) $(LOGO_AUTOLOADER): $(ICON_MASTER) tools/gen_icons.py
+$(ICON0) $(ICON0_RELAPSE) $(ICON0_POOPS) $(ICON_ICO) $(FAVICON_INSTALLER) $(FAVICON_AUTOLOADER) $(LOGO_INSTALLER) $(LOGO_AUTOLOADER): $(ICON_MASTER) $(ICON_MASTER_RELAPSE) $(ICON_MASTER_POOPS) tools/gen_icons.py
 	@echo "Generating icon assets from $(ICON_MASTER)..."
 	$(PYTHON) tools/gen_icons.py
 
