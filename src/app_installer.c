@@ -263,14 +263,16 @@ int wkali_install_apps_if_needed(unsigned int launcher_mask) {
       install_launcher_if_needed(&launcher_relapse) != 0)
     result = -1;
 
+  /* Migrating a 7.xx+ install from the old single generic shortcut should
+   * leave only the dedicated launcher(s). UMTX2 still owns WKAL00001.
+   * This must run BEFORE sceAppInstUtilTerminate(): AppUnInstall needs the
+   * library to still be initialized. */
+  if (result == 0 && (launcher_mask & WKALI_LAUNCHER_UMTX2) == 0)
+    remove_legacy_generic_launcher_if_present();
+
   sceAppInstUtilTerminate();
 
   if (result == 0) {
-    /* Migrating a 7.xx+ install from the old single generic shortcut should
-     * leave only the dedicated launcher(s). UMTX2 still owns WKAL00001. */
-    if ((launcher_mask & WKALI_LAUNCHER_UMTX2) == 0)
-      remove_legacy_generic_launcher_if_present();
-
     wkali_log("[WKALI] Requested launcher set installed successfully.\n");
     wkali_notify("WebKit Autoloader launchers ready!");
   }
