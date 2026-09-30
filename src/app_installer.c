@@ -44,36 +44,36 @@ typedef struct {
   const char *title_id;
   const char *display_name;
   const uint8_t *param_data;
-  size_t param_size;
+  const size_t *param_size;
   const uint8_t *icon_data;
-  size_t icon_size;
+  const size_t *icon_size;
 } LauncherDefinition;
 
 static const LauncherDefinition launcher_umtx2 = {
     WKAL_TITLE_ID,
     "WebKit Autoloader",
     param_json,
-    (size_t)&param_json_size,
+    &param_json_size,
     icon0_png,
-    (size_t)&icon0_png_size,
+    &icon0_png_size,
 };
 
 static const LauncherDefinition launcher_poops = {
     WKAL_POOPS_TITLE_ID,
     "WebKit Autoloader - Poops",
     param_poops_json,
-    (size_t)&param_poops_json_size,
+    &param_poops_json_size,
     icon0_poops_png,
-    (size_t)&icon0_poops_png_size,
+    &icon0_poops_png_size,
 };
 
 static const LauncherDefinition launcher_relapse = {
     WKAL_RELAPSE_TITLE_ID,
     "WebKit Autoloader - Relapse",
     param_relapse_json,
-    (size_t)&param_relapse_json_size,
+    &param_relapse_json_size,
     icon0_relapse_png,
-    (size_t)&icon0_relapse_png_size,
+    &icon0_relapse_png_size,
 };
 
 /* Path buffers below are built as /user/app/<title_id>/... */
@@ -174,9 +174,9 @@ static int install_launcher_if_needed(const LauncherDefinition *launcher) {
   if (stat(base_dir, &st) != 0) {
     update_needed = 1;
   } else {
-    if (needs_update(param_path, launcher->param_data, launcher->param_size))
+    if (needs_update(param_path, launcher->param_data, *launcher->param_size))
       update_needed = 1;
-    if (needs_update(icon_path, launcher->icon_data, launcher->icon_size))
+    if (needs_update(icon_path, launcher->icon_data, *launcher->icon_size))
       update_needed = 1;
   }
 
@@ -203,13 +203,13 @@ static int install_launcher_if_needed(const LauncherDefinition *launcher) {
     return -1;
   }
 
-  if (install_file(param_path, launcher->param_data, launcher->param_size)) {
+  if (install_file(param_path, launcher->param_data, *launcher->param_size)) {
     wkali_log("[WKALI] Failed to install %s param.json\n",
               launcher->display_name);
     return -1;
   }
 
-  if (install_file(icon_path, launcher->icon_data, launcher->icon_size)) {
+  if (install_file(icon_path, launcher->icon_data, *launcher->icon_size)) {
     wkali_log("[WKALI] Failed to install %s icon0.png\n",
               launcher->display_name);
     return -1;
