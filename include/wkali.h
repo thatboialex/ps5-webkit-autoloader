@@ -13,8 +13,11 @@
  * homebrew HTTP servers (must match the deeplink in assets/param.json.template) */
 #define WKALI_PORT 18181
 
-/* Title ID of the installed homescreen app ("WebKit Autoloader") */
+/* Title IDs for installed homescreen launchers.  UMTX2 keeps the legacy
+ * generic launcher; Poops and Relapse use dedicated IDs so both can coexist. */
 #define WKAL_TITLE_ID "WKAL00001"
+#define WKAL_POOPS_TITLE_ID "WKPP00001"
+#define WKAL_RELAPSE_TITLE_ID "WKRL00001"
 
 /* Process identity — used to kill stale installer instances on startup */
 #define WKALI_THREAD_NAME "wkali.elf"
