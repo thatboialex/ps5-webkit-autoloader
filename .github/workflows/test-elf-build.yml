@@ -30,19 +30,19 @@ jobs:
             suffix="$2"
             custom="$3"
 
-            echo "::group::Building \${suffix} (\${mode})"
+            echo "::group::Building ${suffix} (${mode})"
             docker run --rm \
               -u "$(id -u):$(id -g)" \
               -e BUILD_TYPE=dev \
-              -e FORCE_EXPLOIT="\${mode}" \
-              -e CUSTOM_VERSION="\${custom}" \
+              -e FORCE_EXPLOIT="${mode}" \
+              -e CUSTOM_VERSION="${custom}" \
               -v "$(pwd)":/src \
               -w /src \
               ps5-webkit-autoloader-sdk \
               make clean all
 
             test -f installer.elf
-            mv installer.elf "test-elfs/\${suffix}.elf"
+            mv installer.elf "test-elfs/${suffix}.elf"
             echo "::endgroup::"
           }
 
