@@ -160,6 +160,21 @@ static int needs_update(const char *path, const uint8_t *expected_data,
   return mismatch != 0;
 }
 
+static void remove_legacy_generic_launcher_if_present(void) {
+  char legacy_dir[256];
+  struct stat st;
+  snprintf(legacy_dir, sizeof(legacy_dir), "/user/app/%s", WKAL_TITLE_ID);
+  if (stat(legacy_dir, &st) != 0)
+    return;
+
+  int err = sceAppInstUtilAppUnInstall(WKAL_TITLE_ID);
+  if (err) {
+    wkali_log("[WKALI] Legacy generic launcher cleanup failed: 0x%08X\n", err);
+  } else {
+    wkali_log("[WKALI] Removed legacy generic launcher (%s).\n", WKAL_TITLE_ID);
+  }
+}
+
 static int install_launcher_if_needed(const LauncherDefinition *launcher) {
   char base_dir[256];
   char param_path[256];
@@ -251,6 +266,11 @@ int wkali_install_apps_if_needed(unsigned int launcher_mask) {
   sceAppInstUtilTerminate();
 
   if (result == 0) {
+    /* Migrating a 7.xx+ install from the old single generic shortcut should
+     * leave only the dedicated launcher(s). UMTX2 still owns WKAL00001. */
+    if ((launcher_mask & WKALI_LAUNCHER_UMTX2) == 0)
+      remove_legacy_generic_launcher_if_present();
+
     wkali_log("[WKALI] Requested launcher set installed successfully.\n");
     wkali_notify("WebKit Autoloader launchers ready!");
   }
