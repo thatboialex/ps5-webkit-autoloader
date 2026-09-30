@@ -98,6 +98,41 @@ static const char *resolve_exploit(float fw, const char *fw_str, const char *pre
     return NULL;
 }
 
+static unsigned int resolve_launcher_mask(float fw, const char *fw_str,
+                                          const char *preferred) {
+    const char *forced = strcmp(WKALI_FORCE_EXPLOIT, "auto") != 0
+                             ? WKALI_FORCE_EXPLOIT
+                             : preferred;
+
+    int has_umtx2 = is_fw_umtx2(fw);
+    int has_poops = is_fw_poops(fw);
+    int has_relapse = is_fw_relapse(fw, fw_str);
+
+    if (forced) {
+        if (strcmp(forced, "umtx2") == 0 && (has_umtx2 || fw == 0.0f))
+            return WKALI_LAUNCHER_UMTX2;
+        if (strcmp(forced, "poops") == 0 && (has_poops || fw == 0.0f))
+            return WKALI_LAUNCHER_POOPS;
+        if (strcmp(forced, "relapse") == 0 && (has_relapse || fw == 0.0f))
+            return WKALI_LAUNCHER_RELAPSE;
+        return 0;
+    }
+
+    if (has_umtx2)
+        return WKALI_LAUNCHER_UMTX2;
+
+    unsigned int mask = 0;
+    if (has_poops)
+        mask |= WKALI_LAUNCHER_POOPS;
+    if (has_relapse)
+        mask |= WKALI_LAUNCHER_RELAPSE;
+
+    /* Desktop/dev testing has no PS5 UA, so exercise the dual-launcher path. */
+    if (fw == 0.0f)
+        mask = WKALI_LAUNCHER_POOPS | WKALI_LAUNCHER_RELAPSE;
+    return mask;
+}
+
 enum MHD_Result http_on_request(void *cls, struct MHD_Connection *conn,
                                 const char *url, const char *method,
                                 const char *version, const char *upload_data,
@@ -165,7 +200,9 @@ enum MHD_Result http_on_request(void *cls, struct MHD_Connection *conn,
          * homescreen app is only installed/updated now — never on startup —
          * so a shortcut is never created for a partial cache. On failure the
          * server stays up and the page tells the user to re-run the installer. */
-        int err = wkali_install_app_if_needed();
+        const char *preferred = active_exploit[0] ? active_exploit : NULL;
+        unsigned int launcher_mask = resolve_launcher_mask(fw, fw_str, preferred);
+        int err = wkali_install_apps_if_needed(launcher_mask);
         if (err == 0) {
             wkali_log("[WKALI] App installed. Stopping server...\n");
             resp = MHD_create_response_from_buffer(strlen("OK"), (void *)"OK",
@@ -296,19 +333,13 @@ enum MHD_Result http_on_request(void *cls, struct MHD_Connection *conn,
                 mem_mode = MHD_RESPMEM_MUST_FREE;
             }
 
-            /* When on firmware supported by both Poops and Relapse (7.00 - 12.00 except 9.05/11.40),
-               the installer page must ask the user which exploit to install BEFORE
-               proceeding with caching. If no exploit has been chosen yet, strip
-               manifest="..." from index.html so WebKit does NOT start caching.
-               Also strip manifest on unsupported firmwares so WebKit never starts caching. */
-            int is_unsupported = (fw > 0.0f && !is_fw_umtx2(fw) && !is_fw_poops(fw) && !is_fw_relapse(fw, fw_str));
-            int is_dual_fw = (is_fw_poops(fw) && is_fw_relapse(fw, fw_str)) ||
-                             (fw == 0.0f && strcmp(WKALI_FORCE_EXPLOIT, "auto") == 0);
-            int prompt_user = (strcmp(WKALI_FORCE_EXPLOIT, "auto") == 0) && is_dual_fw &&
-                              (exploit_arg == NULL) && (active_exploit[0] == '\0');
+            /* Unsupported firmware must never start AppCache. Dual-supported
+               firmware now caches both Poops and Relapse in one pass. */
+            int is_unsupported = (fw > 0.0f && !is_fw_umtx2(fw) &&
+                                  !is_fw_poops(fw) && !is_fw_relapse(fw, fw_str));
 
             if ((strcmp(url, ROUTE_INDEX) == 0 || strcmp(url, ROUTE_INDEX_HTML) == 0) &&
-                (prompt_user || is_unsupported)) {
+                is_unsupported) {
                 char *copy = malloc(payload_size + 1);
                 if (copy) {
                     memcpy(copy, payload, payload_size);
@@ -328,8 +359,17 @@ enum MHD_Result http_on_request(void *cls, struct MHD_Connection *conn,
 
             /* Dynamically strip incompatible exploit files from the cache manifest */
             if (strcmp(url, ROUTE_CACHE_MANIFEST) == 0) {
-                const char *preferred = exploit_arg ? exploit_arg : (active_exploit[0] ? active_exploit : NULL);
-                const char *chosen = resolve_exploit(fw, fw_str, preferred);
+                const char *preferred = exploit_arg ? exploit_arg :
+                    (active_exploit[0] ? active_exploit : NULL);
+                int dual_cache = (strcmp(WKALI_FORCE_EXPLOIT, "auto") == 0) &&
+                                 !preferred && is_fw_poops(fw) &&
+                                 is_fw_relapse(fw, fw_str);
+                if (fw == 0.0f && strcmp(WKALI_FORCE_EXPLOIT, "auto") == 0 &&
+                    !preferred) {
+                    dual_cache = 1;
+                }
+                const char *chosen = dual_cache ? "dual" :
+                    resolve_exploit(fw, fw_str, preferred);
 
                 if (!chosen) {
                     wkali_log("[WKALI] AppCache manifest: unsupported firmware, refusing to cache\n");
@@ -370,6 +410,8 @@ enum MHD_Result http_on_request(void *cls, struct MHD_Connection *conn,
                             if (strstr(line, "/umtx2/") || strstr(line, "/relapse/")) keep = 0;
                         } else if (strcmp(chosen, "relapse") == 0) {
                             if (strstr(line, "/umtx2/") || strstr(line, "/slopkit/")) keep = 0;
+                        } else if (strcmp(chosen, "dual") == 0) {
+                            if (strstr(line, "/umtx2/")) keep = 0;
                         }
 
                         if (keep) {
