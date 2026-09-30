@@ -241,7 +241,18 @@ def build_manifest(files, version, build_time, app_dir, pointer_path, marker_pat
     lines.append(umtx2_iframe_url(app_dir))
     lines += collect_cachebust_urls(files)
     lines.append(app_dir + "/selected_exploit")
+
+    # Homescreen launcher deeplinks carry ?force=. AppCache keys include the
+    # query string, so cache the exact pointer and versioned-index variants
+    # rather than relying only on FALLBACK namespace behavior.
     lines.append(pointer_path)
+    lines.append(pointer_path + "?force=poops")
+    lines.append(pointer_path + "?force=relapse")
+    lines.append(app_dir + "/index.html?force=poops")
+    lines.append(app_dir + "/index.html?force=relapse")
+
+    # Keep the completeness marker last: its presence still proves everything
+    # above it, including both dedicated launcher entry URLs, was cached.
     lines.append(marker_path)
     lines += [
         "",

@@ -1,0 +1,11 @@
+{
+    "titleId": "WKPP00001",
+    "applicationCategoryType": 65536,
+    "deeplinkUri": "http://127.0.0.1:18181/app/index.html?force=poops",
+    "localizedParameters": {
+        "defaultLanguage": "en-US",
+        "en-US": {
+            "titleName": "WebKit Autoloader - Poops v[[VERSION_PLACEHOLDER]]"
+        }
+    }
+}

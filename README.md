@@ -25,7 +25,7 @@ This autoloader does it differently:
 
 - **Fully offline, no third-party DNS.** After a one-time install from your PC, everything is served straight from your PS5. There's nothing external to go down or change behind your back.  
   Firmwares 12.02–13.60 run **Relapse**, which requires an active network interface (Wi-Fi or Ethernet connected to a local network; Internet access is not required).
-- **One-time setup, then a homescreen shortcut.** Once it's installed, you don't need a PC or the internet — just launch "WebKit Autoloader" from the homescreen and you're done.
+- **One-time setup, then homescreen shortcuts.** On firmware that supports both chains, the installer creates separate **WebKit Autoloader - Relapse** and **WebKit Autoloader - Poops** entries with distinct icons. Firmware that supports only one chain gets only that launcher; UMTX2 keeps the legacy generic launcher.
 - **Payloads loaded the way you already know.** After the exploit chain runs, your payloads are sent just like in [Y2JB](https://github.com/itsPLK/ps5-y2jb-autoloader) / [BD-JB](https://github.com/itsPLK/ps5-bdjb-autoloader) / [Lua](https://github.com/itsPLK/ps5-lua-autoloader) autoloaders — via **Payload Manager**, or a custom `autoload.txt`.
 
 
@@ -37,8 +37,8 @@ There are two ways to set up the autoloader, depending on whether you're already
 
 1. Download `webkit-autoloader-installer_vX.Y.Z.elf` from the [Releases](https://github.com/itsPLK/ps5-webkit-autoloader/releases) page.
 2. Send it to your PS5 with `elfldr`, or launch it from Payload Manager.
-3. The installer opens the browser once to cache the autoloader page, then creates the **WebKit Autoloader** app on the homescreen and exits.
-4. **Reboot once**, then launch **WebKit Autoloader** from the homescreen.
+3. The installer opens the browser once to cache the autoloader page, then creates the launcher(s) supported by your firmware and exits.
+4. **Reboot once**, then launch the **Relapse** or **Poops** homescreen entry you want to use. On UMTX2 firmware, launch the generic **WebKit Autoloader** entry.
 
 ### Not jailbroken yet
 
@@ -46,8 +46,8 @@ If you aren't jailbroken yet, you'll need to host the exploit locally on your PC
 
 1. Download `webkit-autoloader-host.py` (or the `.exe`) from the [Releases](https://github.com/itsPLK/ps5-webkit-autoloader/releases) and run it on a PC on your network.
 2. On your PS5, set your network's DNS server to your PC's IP address.
-3. Open the **User's Guide** from Settings to run the installer, which adds the **WebKit Autoloader** app to your homescreen.
-4. Launch **WebKit Autoloader** from the homescreen.
+3. Open the **User's Guide** from Settings to run the installer, which adds the firmware-compatible WebKit Autoloader launcher(s) to your homescreen.
+4. On dual-supported firmware, choose either **WebKit Autoloader - Relapse** or **WebKit Autoloader - Poops** from the homescreen. They share the same cached frontend but force different existing exploit paths.
 
 ## How to Use
 
@@ -85,7 +85,7 @@ For a fixed, automated payload chain, you can configure payloads manually:
 
 The autoloader content is cached on the console, so updating is exactly the same as the initial install. Simply follow the **[Setup Instructions](#setup-instructions)** using the new release files. 
 
-The latest installer payload will re-create the homescreen app and refresh the cached page for you. Your payloads and `autoload.txt` on USB / internal storage are never touched.
+The latest installer payload will refresh the cached page and create/update the firmware-compatible homescreen launcher(s). Relapse and Poops use separate title IDs and icons, so they can coexist. Your payloads and `autoload.txt` on USB / internal storage are never touched.
 </Details>
 
 <Details>
@@ -114,6 +114,14 @@ etaHEN.elf
 ---
 
 ## For developers
+
+The dedicated launcher title IDs are:
+
+- Relapse: `WKRL00001`
+- Poops: `WKPP00001`
+- Legacy generic / UMTX2: `WKAL00001`
+
+The Relapse and Poops metadata deeplinks use `?force=relapse` and `?force=poops`. The stable pointer page preserves that query string while redirecting into the versioned cached frontend.
 
 The technical internals and project architecture are documented in **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 

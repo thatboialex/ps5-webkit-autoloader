@@ -426,7 +426,9 @@
       var hasRelapse = isRelapseSupported(fwNum, fwStr);
       var isUnsupported = fwNum > 0 && !hasUmtx2 && !hasPoops && !hasRelapse;
       var isDualSupported = (hasPoops && hasRelapse) || (!fw && !fwParam);
-      var needsChoice = isDualSupported && !chosenExploit;
+      /* Dual-supported firmware installs both dedicated launchers by default.
+         The legacy ?exploit= parameter remains available for targeted testing. */
+      var needsChoice = false;
 
       function chooseExploit(choice) {
         if (btnPoops) btnPoops.disabled = true;
@@ -518,7 +520,11 @@
         statusEl.textContent = 'Installed successfully';
         statusEl.style.color = '#22c55e';
         progressBar.style.background = '-webkit-linear-gradient(90deg, #16a34a 0%, #22c55e 100%)';
-        detailEl.textContent = 'The WebKit Autoloader shortcut is now on your PS5 homescreen. You can close this page.';
+        if (hasPoops && hasRelapse && !chosenExploit) {
+          detailEl.textContent = 'Relapse and Poops shortcuts are now on your PS5 homescreen. You can close this page.';
+        } else {
+          detailEl.textContent = 'The WebKit Autoloader shortcut is now on your PS5 homescreen. You can close this page.';
+        }
         setProgress(100);
       }
 
@@ -743,8 +749,8 @@
           effectiveExploit = 'poops';
         } else if (hasRelapse && !hasPoops) {
           effectiveExploit = 'relapse';
-        } else if (hasPoops && hasRelapse) {
-          effectiveExploit = (chosenExploit === 'poops') ? 'poops' : 'relapse';
+        } else if (hasPoops && hasRelapse && chosenExploit) {
+          effectiveExploit = chosenExploit;
         } else if (chosenExploit) {
           effectiveExploit = chosenExploit;
         }
@@ -756,9 +762,9 @@
 
         probeServer();
 
-        /* The shortcut is created only once the AppCache is current, so the
-           installer never installs a partial cache. /install then both installs
-           the homescreen app and stops the server. */
+        /* Shortcuts are created only once AppCache is current, so the installer
+           never installs launchers that point at a partial cache. /install then
+           installs the firmware-appropriate launcher set and stops the server. */
         var waitTimer = setInterval(function () {
           if (completed) {
             clearInterval(waitTimer);

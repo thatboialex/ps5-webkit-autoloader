@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compute the build version and generate include/wkali_version.h + assets/param.json.
+"""Compute the build version and generate version headers + launcher metadata.
 
 Version scheme (mirrors the ps5-bdjb-autoloader project):
 
@@ -33,8 +33,14 @@ import sys
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HEADER = os.path.join(REPO, "include", "wkali_version.h")
 WKALI_H = os.path.join(REPO, "include", "wkali.h")
-PARAM_JSON = os.path.join(REPO, "assets", "param.json")
-PARAM_TEMPLATE = os.path.join(REPO, "assets", "param.json.template")
+PARAM_OUTPUTS = [
+    (os.path.join(REPO, "assets", "param.json"),
+     os.path.join(REPO, "assets", "param.json.template")),
+    (os.path.join(REPO, "assets", "param-relapse.json"),
+     os.path.join(REPO, "assets", "param-relapse.json.template")),
+    (os.path.join(REPO, "assets", "param-poops.json"),
+     os.path.join(REPO, "assets", "param-poops.json.template")),
+]
 VERSION_PLACEHOLDER = b"[[VERSION_PLACEHOLDER]]"
 
 
@@ -136,13 +142,15 @@ def main(argv=None):
 
     write_if_changed(HEADER, header_text(info).encode("utf-8"))
 
-    # PS5 homescreen app metadata — title gets the base version (or the full
-    # custom version) so the app label reflects what was built.
-    with open(PARAM_TEMPLATE, "rb") as f:
-        param = f.read()
-    write_if_changed(
-        PARAM_JSON, param.replace(VERSION_PLACEHOLDER, info["title"].encode("utf-8"))
-    )
+    # PS5 homescreen metadata: all launchers share one build version while
+    # keeping independent title IDs, display names and deeplinks.
+    for output_path, template_path in PARAM_OUTPUTS:
+        with open(template_path, "rb") as f:
+            param = f.read()
+        write_if_changed(
+            output_path,
+            param.replace(VERSION_PLACEHOLDER, info["title"].encode("utf-8")),
+        )
     return 0
 
 

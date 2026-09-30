@@ -42,6 +42,8 @@ FRONTEND_FILES := $(shell find $(FRONTEND_INSTALLER_PAGE) $(FRONTEND_POINTER) $(
 # Generated icon assets (master: assets/icon.svg, see tools/gen_icons.py)
 ICON_MASTER := assets/icon.svg
 ICON0 := assets/icon0.png
+ICON0_RELAPSE := assets/icon0-relapse.png
+ICON0_POOPS := assets/icon0-poops.png
 ICON_ICO := assets/icon.ico
 FAVICON_INSTALLER := $(FRONTEND_INSTALLER_PAGE)/favicon.svg
 FAVICON_AUTOLOADER := $(FRONTEND_AUTOLOADER)/favicon.svg
@@ -81,9 +83,9 @@ print-version:
 	@$(PYTHON) tools/gen_version.py --print
 
 # Regenerate all derived icon assets (homescreen icon, .ico, favicons, logos)
-icons: $(ICON0) $(ICON_ICO) $(FAVICON_INSTALLER) $(FAVICON_AUTOLOADER) $(LOGO_INSTALLER) $(LOGO_AUTOLOADER)
+icons: $(ICON0) $(ICON0_RELAPSE) $(ICON0_POOPS) $(ICON_ICO) $(FAVICON_INSTALLER) $(FAVICON_AUTOLOADER) $(LOGO_INSTALLER) $(LOGO_AUTOLOADER)
 
-$(ICON0) $(ICON_ICO) $(FAVICON_INSTALLER) $(FAVICON_AUTOLOADER) $(LOGO_INSTALLER) $(LOGO_AUTOLOADER): $(ICON_MASTER) tools/gen_icons.py
+$(ICON0) $(ICON0_RELAPSE) $(ICON0_POOPS) $(ICON_ICO) $(FAVICON_INSTALLER) $(FAVICON_AUTOLOADER) $(LOGO_INSTALLER) $(LOGO_AUTOLOADER): $(ICON_MASTER) tools/gen_icons.py
 	@echo "Generating icon assets from $(ICON_MASTER)..."
 	$(PYTHON) tools/gen_icons.py
 
@@ -132,7 +134,7 @@ $(FILE_REGISTRY_STAMP): $(FRONTEND_FILES) version icons relapse-prepare slopkit-
 	$(PYTHON) tools/gen_file_registry.py $(FRONTEND_STAGE) $(FILE_REGISTRY_H) $(FILE_REGISTRY_C)
 	@touch $(FILE_REGISTRY_STAMP)
 
-$(ELF): $(FILE_REGISTRY_H) $(FILE_REGISTRY_C) $(SRCS) $(ICON0)
+$(ELF): $(FILE_REGISTRY_H) $(FILE_REGISTRY_C) $(SRCS) $(ICON0) $(ICON0_RELAPSE) $(ICON0_POOPS)
 	@echo "Building $(ELF)..."
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $(ELF) $(SRCS) $(FILE_REGISTRY_C) $(LIBS)
 	@echo "Stripping $(ELF)..."
